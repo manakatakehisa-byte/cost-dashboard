@@ -5,22 +5,20 @@ import { fmt, diffColor, groupAndSum, getMonths, getYears } from '../lib/utils'
 const SUM_FIELDS = ['totalQty','inspCost','base','sampling','other','othersTotal','inspPlusOthers','baseVsDiff']
 
 export default function InspectionTab({ data }) {
-  const [period, setPeriod] = useState('month')   // 'month' | 'year'
+  const [period, setPeriod] = useState('month')
   const [selectedPeriod, setSelectedPeriod] = useState('all')
-  const [groupBy, setGroupBy] = useState('factory') // 'factory' | 'inspector' | 'both'
+  const [groupBy, setGroupBy] = useState('factory')
 
   const months = useMemo(() => getMonths(data), [data])
   const years  = useMemo(() => getYears(data), [data])
   const periods = period === 'month' ? months : years
 
-  // フィルタリング
   const filtered = useMemo(() => {
     if (selectedPeriod === 'all') return data
     const key = period === 'month' ? 'yearMonth' : 'year'
     return data.filter(d => d[key] === selectedPeriod)
   }, [data, selectedPeriod, period])
 
-  // グループ化
   const groupKey = groupBy === 'both'
     ? ['factory', 'inspector']
     : groupBy === 'factory' ? 'factory' : 'inspector'
@@ -29,14 +27,13 @@ export default function InspectionTab({ data }) {
     const grouped = groupAndSum(filtered, groupKey, SUM_FIELDS)
     return grouped.map(r => ({
       ...r,
-      perPcs: r.totalQty > 0 ? Math.round((r.inspCost / r.totalQty) * 100) / 100 : 0,
+      perPcs: r.totalQty > 0 ? Math.round(r.inspCost / r.totalQty) : 0,
       label: Array.isArray(groupKey)
         ? `${r.factory} / ${r.inspector}`
         : r[groupKey] || '不明',
     })).sort((a, b) => b.inspCost - a.inspCost)
   }, [filtered, groupKey])
 
-  // グラフ用：月別 / 年別の推移（全体）
   const trendData = useMemo(() => {
     const key = period === 'month' ? 'yearMonth' : 'year'
     const map = {}
@@ -55,6 +52,13 @@ export default function InspectionTab({ data }) {
     setPeriod(p)
     setSelectedPeriod('all')
   }
+
+  const totalOthers = rows.reduce((s,r)=>s+r.othersTotal,0)
+  const totalInspPlusOthers = rows.reduce((s,r)=>s+r.inspPlusOthers,0)
+  const totalBaseVsDiff = rows.reduce((s,r)=>s+r.baseVsDiff,0)
+  const totalQty = rows.reduce((s,r)=>s+r.totalQty,0)
+  const totalInspCost = rows.reduce((s,r)=>s+r.inspCost,0)
+  const totalBase = rows.reduce((s,r)=>s+r.base,0)
 
   return (
     <div className="space-y-6">
@@ -130,8 +134,6 @@ export default function InspectionTab({ data }) {
                 </th>
                 <th className="px-4 py-3 text-right">検品数</th>
                 <th className="px-4 py-3 text-right">検品費</th>
-                <th className="px-4 py-3 text-right">抜取+その他</th>
-                <th className="px-4 py-3 text-right bg-blue-50">検品費+抜取+その他</th>
                 <th className="px-4 py-3 text-right">BASE</th>
                 <th className="px-4 py-3 text-right bg-amber-50">BASE差額</th>
                 <th className="px-4 py-3 text-right bg-green-50">1pcs平均コスト</th>
@@ -139,21 +141,19 @@ export default function InspectionTab({ data }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-8 text-slate-400">データがありません</td></tr>
+                <tr><td colSpan={6} className="text-center py-8 text-slate-400">データがありません</td></tr>
               )}
               {rows.map((r, i) => (
                 <tr key={i} className="hover:bg-slate-50 transition">
                   <td className="px-4 py-3 font-medium text-slate-800 sticky left-0 bg-white">{r.label}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{fmt(r.totalQty)}</td>
                   <td className="px-4 py-3 text-right text-slate-700">¥{fmt(r.inspCost)}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">¥{fmt(r.othersTotal)}</td>
-                  <td className="px-4 py-3 text-right bg-blue-50 font-semibold text-blue-800">¥{fmt(r.inspPlusOthers)}</td>
                   <td className="px-4 py-3 text-right text-slate-700">¥{fmt(r.base)}</td>
                   <td className={`px-4 py-3 text-right bg-amber-50 ${diffColor(r.baseVsDiff)}`}>
                     {r.baseVsDiff >= 0 ? '+' : ''}¥{fmt(r.baseVsDiff)}
                   </td>
                   <td className="px-4 py-3 text-right bg-green-50 text-emerald-700 font-semibold">
-                    ¥{fmt(r.perPcs, 2)}
+                    ¥{fmt(r.perPcs)}
                   </td>
                 </tr>
               ))}
@@ -162,20 +162,24 @@ export default function InspectionTab({ data }) {
               <tfoot>
                 <tr className="bg-slate-100 font-bold text-slate-800 text-sm">
                   <td className="px-4 py-3 sticky left-0 bg-slate-100">合計</td>
-                  <td className="px-4 py-3 text-right">{fmt(rows.reduce((s,r)=>s+r.totalQty,0))}</td>
-                  <td className="px-4 py-3 text-right">¥{fmt(rows.reduce((s,r)=>s+r.inspCost,0))}</td>
-                  <td className="px-4 py-3 text-right">¥{fmt(rows.reduce((s,r)=>s+r.othersTotal,0))}</td>
-                  <td className="px-4 py-3 text-right bg-blue-100">¥{fmt(rows.reduce((s,r)=>s+r.inspPlusOthers,0))}</td>
-                  <td className="px-4 py-3 text-right">¥{fmt(rows.reduce((s,r)=>s+r.base,0))}</td>
-                  <td className={`px-4 py-3 text-right bg-amber-100 ${diffColor(rows.reduce((s,r)=>s+r.baseVsDiff,0))}`}>
-                    {rows.reduce((s,r)=>s+r.baseVsDiff,0) >= 0 ? '+' : ''}¥{fmt(rows.reduce((s,r)=>s+r.baseVsDiff,0))}
+                  <td className="px-4 py-3 text-right">{fmt(totalQty)}</td>
+                  <td className="px-4 py-3 text-right">¥{fmt(totalInspCost)}</td>
+                  <td className="px-4 py-3 text-right">¥{fmt(totalBase)}</td>
+                  <td className={`px-4 py-3 text-right bg-amber-100 ${diffColor(totalBaseVsDiff)}`}>
+                    {totalBaseVsDiff >= 0 ? '+' : ''}¥{fmt(totalBaseVsDiff)}
                   </td>
-                  <td className="px-4 py-3 text-right bg-green-100">
-                    {(() => {
-                      const tQty = rows.reduce((s,r)=>s+r.totalQty,0)
-                      const tCost = rows.reduce((s,r)=>s+r.inspCost,0)
-                      return `¥${fmt(tQty > 0 ? tCost/tQty : 0, 2)}`
-                    })()}
+                  <td className="px-4 py-3 text-right bg-green-100 text-emerald-700">
+                    ¥{fmt(totalQty > 0 ? Math.round(totalInspCost / totalQty) : 0)}
+                  </td>
+                </tr>
+                <tr className="bg-blue-50 font-bold text-slate-800 text-sm">
+                  <td className="px-4 py-3 sticky left-0 bg-blue-50">合計（抜取込）</td>
+                  <td className="px-4 py-3 text-right">{fmt(totalQty)}</td>
+                  <td className="px-4 py-3 text-right text-blue-700">¥{fmt(totalOthers)}</td>
+                  <td className="px-4 py-3 text-right">¥{fmt(totalBase)}</td>
+                  <td className="px-4 py-3 text-right bg-amber-100"></td>
+                  <td className="px-4 py-3 text-right bg-blue-100 text-blue-700">
+                    ¥{fmt(totalInspPlusOthers)}
                   </td>
                 </tr>
               </tfoot>
