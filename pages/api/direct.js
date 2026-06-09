@@ -7,21 +7,17 @@ export default async function handler(req, res) {
 
     if (rows.length < 3) return res.status(200).json([])
 
-    // 1行目が空なので2行目をヘッダーとして使う
-    // 列は固定: A=報告日 B=工場名 C=品番 D=納品数 E=総計 F=良品数 G=検品会社 H=梱包費 I=差額 J=BASE K=内職 L=検品 M=アウトレット N=破棄費 O=アウト保管 P=バーコード Q=差額（検品会社）
     const col = {
-      date:          0,  // A
-      factory:       1,  // B
-      itemCode:      2,  // C
-      deliveryQty:   3,  // D
-      totalQty:      4,  // E
-      goodQty:       5,  // F
-      inspector:     6,  // G
-      packCost:      7,  // H
-      diff:          8,  // I
-      base:          9,  // J
-      inspFee:       11, // L
-      diffInspector: 16, // Q
+      date:          0,  // A 報告日
+      factory:       1,  // B 工場名
+      itemCode:      2,  // C 品番
+      inspQty:       3,  // D 検品数
+      defectQty:     4,  // E 不良数（総計）
+      inspCost:      6,  // G 検品会社コスト
+      packCost:      7,  // H 梱包費
+      diffInspPack:  8,  // I 検品会社+梱包費の差額
+      base:          9,  // J BASE
+      diffInspBase:  16, // Q 検品費とBASEの差額
     }
 
     const data = []
@@ -32,41 +28,18 @@ export default async function handler(req, res) {
       const year = toYear(rawDate)
       if (!ym && !year) continue
 
-      const totalQty      = toNum(r[col.totalQty])
-      const goodQty       = toNum(r[col.goodQty])
-      const inspFee       = toNum(r[col.inspFee])
-      const packCost      = toNum(r[col.packCost])
-      const base          = toNum(r[col.base])
-      const diff          = toNum(r[col.diff])
-      const diffInspector = toNum(r[col.diffInspector])
-
-      const inspVsBase    = inspFee - base
-      const packVsBase    = packCost - base
-      const inspPackTotal = inspFee + packCost
-      const inspPackDiff  = inspPackTotal - base
-
-      const perPcsInsp = totalQty > 0 ? inspFee / totalQty : 0
-      const perPcsPack = totalQty > 0 ? packCost / totalQty : 0
-
       data.push({
-        yearMonth: ym,
+        yearMonth:    ym,
         year,
-        factory:       r[col.factory] || '',
-        itemCode:      r[col.itemCode] || '',
-        inspector:     r[col.inspector] || '',
-        totalQty,
-        goodQty,
-        inspFee,
-        packCost,
-        base,
-        diff,
-        diffInspector,
-        inspVsBase,
-        packVsBase,
-        inspPackTotal,
-        inspPackDiff,
-        perPcsInsp: Math.round(perPcsInsp * 100) / 100,
-        perPcsPack: Math.round(perPcsPack * 100) / 100,
+        factory:      r[col.factory] || '',
+        itemCode:     r[col.itemCode] || '',
+        inspQty:      toNum(r[col.inspQty]),
+        defectQty:    toNum(r[col.defectQty]),
+        inspCost:     toNum(r[col.inspCost]),
+        packCost:     toNum(r[col.packCost]),
+        diffInspPack: toNum(r[col.diffInspPack]),
+        base:         toNum(r[col.base]),
+        diffInspBase: toNum(r[col.diffInspBase]),
       })
     }
 
