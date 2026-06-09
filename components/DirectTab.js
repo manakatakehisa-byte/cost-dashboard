@@ -32,6 +32,17 @@ export default function DirectTab({ data = [] }) {
   const groupKey = viewMode === 'month' ? 'yearMonth' : 'year'
   const rows = aggregate(filtered, groupKey)
 
+  // 合計行
+  const total = rows.reduce((acc, r) => ({
+    inspQty: acc.inspQty + r.inspQty,
+    defectQty: acc.defectQty + r.defectQty,
+    inspCost: acc.inspCost + r.inspCost,
+    packCost: acc.packCost + r.packCost,
+    diffInspPack: acc.diffInspPack + r.diffInspPack,
+    base: acc.base + r.base,
+    diffInspBase: acc.diffInspBase + r.diffInspBase,
+  }), { inspQty: 0, defectQty: 0, inspCost: 0, packCost: 0, diffInspPack: 0, base: 0, diffInspBase: 0 })
+
   const chartData = (() => {
     const map = {}
     rows.forEach(r => {
@@ -42,6 +53,12 @@ export default function DirectTab({ data = [] }) {
     })
     return Object.values(map).sort((a, b) => a.period.localeCompare(b.period))
   })()
+
+  const diffCell = (val) => (
+    <span className={val < 0 ? 'text-red-600' : 'text-green-600'}>
+      {val < 0 ? '-' : '+'}{fmt(Math.abs(val))}
+    </span>
+  )
 
   return (
     <div className="space-y-6">
@@ -85,8 +102,8 @@ export default function DirectTab({ data = [] }) {
               <th className="px-3 py-3 text-right">検品会社</th>
               <th className="px-3 py-3 text-right">梱包費</th>
               <th className="px-3 py-3 text-right">BASE</th>
-              <th className="px-3 py-3 text-right">検品+梱包 差額</th>
-              <th className="px-3 py-3 text-right">検品費-BASE 差額</th>
+              <th className="px-3 py-3 text-right">検品→直入庫 移行差額</th>
+              <th className="px-3 py-3 text-right">国内検品→直入庫 差額</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -99,15 +116,23 @@ export default function DirectTab({ data = [] }) {
                 <td className="px-3 py-2 text-right">{fmt(r.inspCost)}</td>
                 <td className="px-3 py-2 text-right">{fmt(r.packCost)}</td>
                 <td className="px-3 py-2 text-right">{fmt(r.base)}</td>
-                <td className={`px-3 py-2 text-right font-medium ${r.diffInspPack < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {r.diffInspPack < 0 ? '-' : '+'}{fmt(Math.abs(r.diffInspPack))}
-                </td>
-                <td className={`px-3 py-2 text-right font-medium ${r.diffInspBase < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {r.diffInspBase < 0 ? '-' : '+'}{fmt(Math.abs(r.diffInspBase))}
-                </td>
+                <td className="px-3 py-2 text-right font-medium">{diffCell(r.diffInspPack)}</td>
+                <td className="px-3 py-2 text-right font-medium">{diffCell(r.diffInspBase)}</td>
               </tr>
             ))}
           </tbody>
+          <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300">
+            <tr>
+              <td className="px-3 py-3 text-gray-700" colSpan={2}>合計</td>
+              <td className="px-3 py-3 text-right">{fmt(total.inspQty)}</td>
+              <td className="px-3 py-3 text-right">{fmt(total.defectQty)}</td>
+              <td className="px-3 py-3 text-right">{fmt(total.inspCost)}</td>
+              <td className="px-3 py-3 text-right">{fmt(total.packCost)}</td>
+              <td className="px-3 py-3 text-right">{fmt(total.base)}</td>
+              <td className="px-3 py-3 text-right">{diffCell(total.diffInspPack)}</td>
+              <td className="px-3 py-3 text-right">{diffCell(total.diffInspBase)}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
