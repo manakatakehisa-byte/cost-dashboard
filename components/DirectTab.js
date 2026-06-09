@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const fmt = (n) => Math.round(n).toLocaleString('ja-JP')
@@ -21,20 +21,10 @@ function aggregate(data, groupKey) {
   return Object.values(map).sort((a, b) => a.period.localeCompare(b.period))
 }
 
-export default function DirectTab() {
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('month') // month | year
+export default function DirectTab({ data = [] }) {
+  const [viewMode, setViewMode] = useState('month')
   const [selectedFactory, setSelectedFactory] = useState('all')
 
-  useEffect(() => {
-    fetch('/api/direct').then(r => r.json()).then(d => {
-      setData(Array.isArray(d) ? d : [])
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [])
-
-  if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>
   if (!data.length) return <div className="p-8 text-center text-gray-500">データがありません</div>
 
   const factories = ['all', ...Array.from(new Set(data.map(d => d.factory))).sort()]
@@ -95,8 +85,8 @@ export default function DirectTab() {
               <th className="px-3 py-3 text-right">検品会社</th>
               <th className="px-3 py-3 text-right">梱包費</th>
               <th className="px-3 py-3 text-right">BASE</th>
-              <th className="px-3 py-3 text-right">検品+梱包差額</th>
-              <th className="px-3 py-3 text-right">検品費-BASE差額</th>
+              <th className="px-3 py-3 text-right">検品+梱包 差額</th>
+              <th className="px-3 py-3 text-right">検品費-BASE 差額</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -109,8 +99,12 @@ export default function DirectTab() {
                 <td className="px-3 py-2 text-right">{fmt(r.inspCost)}</td>
                 <td className="px-3 py-2 text-right">{fmt(r.packCost)}</td>
                 <td className="px-3 py-2 text-right">{fmt(r.base)}</td>
-                <td className={`px-3 py-2 text-right font-medium ${r.diffInspPack < 0 ? 'text-red-600' : 'text-green-600'}`}>{fmt(r.diffInspPack)}</td>
-                <td className={`px-3 py-2 text-right font-medium ${r.diffInspBase < 0 ? 'text-red-600' : 'text-green-600'}`}>{fmt(r.diffInspBase)}</td>
+                <td className={`px-3 py-2 text-right font-medium ${r.diffInspPack < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {r.diffInspPack < 0 ? '-' : '+'}{fmt(Math.abs(r.diffInspPack))}
+                </td>
+                <td className={`px-3 py-2 text-right font-medium ${r.diffInspBase < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {r.diffInspBase < 0 ? '-' : '+'}{fmt(Math.abs(r.diffInspBase))}
+                </td>
               </tr>
             ))}
           </tbody>
