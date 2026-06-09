@@ -7,23 +7,21 @@ export default async function handler(req, res) {
 
     if (rows.length < 3) return res.status(200).json([])
 
-    const header = rows[1]
-    const idx = (name) => header.findIndex(h => h && h.includes(name))
-
+    // 1行目が空なので2行目をヘッダーとして使う
+    // 列は固定: A=報告日 B=工場名 C=品番 D=納品数 E=総計 F=良品数 G=検品会社 H=梱包費 I=差額 J=BASE K=内職 L=検品 M=アウトレット N=破棄費 O=アウト保管 P=バーコード Q=差額（検品会社）
     const col = {
-      date:          idx('報告日'),
-      factory:       idx('工場名'),
-      itemCode:      idx('品番'),
-      totalQty:      idx('総計'),
-      goodQty:       idx('良品数'),
-      inspector:     idx('検品会社'),
-      packCost:      idx('梱包費'),
-      diff:          idx('差額'),
-      base:          idx('BASE'),
-      inspFee:       idx('検品'),
-      outStorage:    idx('アウト保管'),
-      barcode:       idx('バーコード'),
-      diffInspector: idx('差額（検品会社）'),
+      date:          0,  // A
+      factory:       1,  // B
+      itemCode:      2,  // C
+      deliveryQty:   3,  // D
+      totalQty:      4,  // E
+      goodQty:       5,  // F
+      inspector:     6,  // G
+      packCost:      7,  // H
+      diff:          8,  // I
+      base:          9,  // J
+      inspFee:       11, // L
+      diffInspector: 16, // Q
     }
 
     const data = []
