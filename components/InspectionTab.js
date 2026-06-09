@@ -54,7 +54,6 @@ export default function InspectionTab({ data }) {
   }
 
   const totalOthers = rows.reduce((s,r)=>s+r.othersTotal,0)
-  const totalInspPlusOthers = rows.reduce((s,r)=>s+r.inspPlusOthers,0)
   const totalBaseVsDiff = rows.reduce((s,r)=>s+r.baseVsDiff,0)
   const totalQty = rows.reduce((s,r)=>s+r.totalQty,0)
   const totalInspCost = rows.reduce((s,r)=>s+r.inspCost,0)
@@ -134,6 +133,7 @@ export default function InspectionTab({ data }) {
                 </th>
                 <th className="px-4 py-3 text-right">検品数</th>
                 <th className="px-4 py-3 text-right">検品費</th>
+                <th className="px-4 py-3 text-right bg-blue-50">抜き取り費</th>
                 <th className="px-4 py-3 text-right">BASE</th>
                 <th className="px-4 py-3 text-right bg-amber-50">BASE差額</th>
                 <th className="px-4 py-3 text-right bg-green-50">1pcs平均コスト</th>
@@ -141,13 +141,14 @@ export default function InspectionTab({ data }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-slate-400">データがありません</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-slate-400">データがありません</td></tr>
               )}
               {rows.map((r, i) => (
                 <tr key={i} className="hover:bg-slate-50 transition">
                   <td className="px-4 py-3 font-medium text-slate-800 sticky left-0 bg-white">{r.label}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{fmt(r.totalQty)}</td>
                   <td className="px-4 py-3 text-right text-slate-700">¥{fmt(r.inspCost)}</td>
+                  <td className="px-4 py-3 text-right bg-blue-50 text-slate-400">―</td>
                   <td className="px-4 py-3 text-right text-slate-700">¥{fmt(r.base)}</td>
                   <td className={`px-4 py-3 text-right bg-amber-50 ${diffColor(r.baseVsDiff)}`}>
                     {r.baseVsDiff >= 0 ? '+' : ''}¥{fmt(r.baseVsDiff)}
@@ -164,22 +165,13 @@ export default function InspectionTab({ data }) {
                   <td className="px-4 py-3 sticky left-0 bg-slate-100">合計</td>
                   <td className="px-4 py-3 text-right">{fmt(totalQty)}</td>
                   <td className="px-4 py-3 text-right">¥{fmt(totalInspCost)}</td>
+                  <td className="px-4 py-3 text-right bg-blue-100 text-blue-700">¥{fmt(totalOthers)}</td>
                   <td className="px-4 py-3 text-right">¥{fmt(totalBase)}</td>
                   <td className={`px-4 py-3 text-right bg-amber-100 ${diffColor(totalBaseVsDiff)}`}>
                     {totalBaseVsDiff >= 0 ? '+' : ''}¥{fmt(totalBaseVsDiff)}
                   </td>
                   <td className="px-4 py-3 text-right bg-green-100 text-emerald-700">
                     ¥{fmt(totalQty > 0 ? Math.round(totalInspCost / totalQty) : 0)}
-                  </td>
-                </tr>
-                <tr className="bg-blue-50 font-bold text-slate-800 text-sm">
-                  <td className="px-4 py-3 sticky left-0 bg-blue-50">合計（抜取込）</td>
-                  <td className="px-4 py-3 text-right">{fmt(totalQty)}</td>
-                  <td className="px-4 py-3 text-right text-blue-700">¥{fmt(totalOthers)}</td>
-                  <td className="px-4 py-3 text-right">¥{fmt(totalBase)}</td>
-                  <td className="px-4 py-3 text-right bg-amber-100"></td>
-                  <td className="px-4 py-3 text-right bg-blue-100 text-blue-700">
-                    ¥{fmt(totalInspPlusOthers)}
                   </td>
                 </tr>
               </tfoot>
