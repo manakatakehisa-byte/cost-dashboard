@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     // ヘッダー行を取得してカラムインデックスを動的に判定
     const header = rows[0]
     const idx = (name) => header.findIndex(h => h && h.includes(name))
+    const idxExact = (name) => header.findIndex(h => h && h.trim() === name.trim())
 
     const col = {
       yearMonth: idx('年月'),
@@ -33,7 +34,7 @@ export default async function handler(req, res) {
       otherStaff:idx('その他社員'),
       diff:      idx('差額'),
       sampling:  idx('抜き取り'),
-      other:     idx('その他'),
+     other:     idxExact('その他'),
     }
 
     const data = []
