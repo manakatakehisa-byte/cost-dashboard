@@ -58,10 +58,12 @@ export default function ComparisonTab({ inspData, directData }) {
     ? [...new Set([...inspFiltered.map(d => d.factory), ...directFiltered.map(d => d.factory)])].sort()
     : [factory]
 
-  const inspByFactory = (f) => {
+const inspByFactory = (f) => {
     const rows = inspFiltered.filter(d => d.factory === f)
-    const cost = rows.reduce((s, d) => s + d.inspCost, 0)
     const qty  = rows.reduce((s, d) => s + d.totalQty, 0)
+    const rawCost = rows.reduce((s, d) => s + d.inspCost, 0)
+    const dir  = directByFactory(f)
+    const cost = f === 'サンリーフ' ? rawCost - dir.packCost : rawCost
     return { cost, qty, perPcs: qty > 0 ? cost / qty : 0 }
   }
 
