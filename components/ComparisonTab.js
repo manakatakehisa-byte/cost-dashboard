@@ -94,18 +94,18 @@ export default function ComparisonTab({ inspData, directData }) {
   const diffToInsp = (f) => directByFactory(f).diffInspBase
   const diffToInspTotal = directTotal.diffInspBase
 
-  // 検品会社→直入庫 = I列（サンリーフはH列を引く）
+  // 検品会社→直入庫（サンリーフはH列を足す）
   const diffToDirect = (f) => {
     const dir = directByFactory(f)
-    return f === 'サンリーフ' ? dir.diffInspPack - dir.packCost : dir.diffInspPack
+    return f === 'サンリーフ' ? dir.diffInspPack + dir.packCost : dir.diffInspPack
   }
   const diffToDirectTotal = displayFactories.reduce((s, f) => s + diffToDirect(f), 0)
 
-  // 国内検品→直入庫 = I列 + Q列（サンリーフはH列を引く）
+  // 国内検品→直入庫（サンリーフはH列を足す）
   const diffNaishokuToDirect = (f) => {
     const dir = directByFactory(f)
     const base = dir.diffInspPack + dir.diffInspBase
-    return f === 'サンリーフ' ? base - dir.packCost : base
+    return f === 'サンリーフ' ? base + dir.packCost : base
   }
   const diffNaishokuToDirectTotal = displayFactories.reduce((s, f) => s + diffNaishokuToDirect(f), 0)
 
