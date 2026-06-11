@@ -67,11 +67,14 @@ export default function ComparisonTab({ inspData, directData }) {
 
   const directByFactory = (f) => {
     const rows = directFiltered.filter(d => d.factory === f)
-    const cost         = rows.reduce((s, d) => s + (d.inspCost || 0), 0)
     const qty          = rows.reduce((s, d) => s + d.inspQty, 0)
     const packCost     = rows.reduce((s, d) => s + (d.packCost || 0), 0)
     const diffInspPack = rows.reduce((s, d) => s + (d.diffInspPack || 0), 0)
     const diffInspBase = rows.reduce((s, d) => s + (d.diffInspBase || 0), 0)
+    // サンリーフの検品費はI列-H列、それ以外はH列
+    const cost = f === 'サンリーフ'
+      ? diffInspPack - packCost
+      : packCost
     return { cost, qty, perPcs: qty > 0 ? cost / qty : 0, packCost, diffInspPack, diffInspBase }
   }
 
@@ -82,12 +85,12 @@ export default function ComparisonTab({ inspData, directData }) {
   inspTotal.perPcs = inspTotal.qty > 0 ? inspTotal.cost / inspTotal.qty : 0
 
   const directTotal = {
-    cost:         directForFactory.reduce((s, d) => s + (d.inspCost || 0), 0),
     qty:          directForFactory.reduce((s, d) => s + d.inspQty, 0),
     packCost:     directForFactory.reduce((s, d) => s + (d.packCost || 0), 0),
     diffInspPack: directForFactory.reduce((s, d) => s + (d.diffInspPack || 0), 0),
     diffInspBase: directForFactory.reduce((s, d) => s + (d.diffInspBase || 0), 0),
   }
+  directTotal.cost = displayFactories.reduce((s, f) => s + directByFactory(f).cost, 0)
   directTotal.perPcs = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
 
   // 国内検品→検品会社 = 直入庫Q列のみ
