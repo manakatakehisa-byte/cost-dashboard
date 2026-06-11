@@ -37,6 +37,7 @@ export default function ComparisonTab({ inspData, directData }) {
   const filterByDate = (data) => {
     if (filterType === 'month') return data.filter(d => d.yearMonth === yearMonth)
     if (filterType === 'year')  return data.filter(d => d.yearMonth?.startsWith(year))
+    if (filterType === 'all' || filterType === 'trendMonth' || filterType === 'trendYear') return data
     return data
   }
 
@@ -58,16 +59,16 @@ export default function ComparisonTab({ inspData, directData }) {
     ? [...new Set([...inspFiltered.map(d => d.factory), ...directFiltered.map(d => d.factory)])].sort()
     : [factory]
 
-  const inspByFactory = (f) => {
-    const rows = inspFiltered.filter(d => d.factory === f)
-    const cost     = rows.reduce((s, d) => s + d.inspCost, 0)
-    const qty      = rows.reduce((s, d) => s + d.totalQty, 0)
+  const inspByFactory = (f, inspRows) => {
+    const rows = (inspRows || inspFiltered).filter(d => d.factory === f)
+    const cost      = rows.reduce((s, d) => s + d.inspCost, 0)
+    const qty       = rows.reduce((s, d) => s + d.totalQty, 0)
     const baseVsDiff = rows.reduce((s, d) => s + d.baseVsDiff, 0)
     return { cost, qty, perPcs: qty > 0 ? cost / qty : 0, baseVsDiff }
   }
 
-  const directByFactory = (f) => {
-    const rows = directFiltered.filter(d => d.factory === f)
+  const directByFactory = (f, dirRows) => {
+    const rows = (dirRows || directFiltered).filter(d => d.factory === f)
     const qty          = rows.reduce((s, d) => s + d.inspQty, 0)
     const packCost     = rows.reduce((s, d) => s + (d.packCost || 0), 0)
     const diffInspPack = rows.reduce((s, d) => s + (d.diffInspPack || 0), 0)
@@ -88,27 +89,81 @@ export default function ComparisonTab({ inspData, directData }) {
     diffInspPack: directForFactory.reduce((s, d) => s + (d.diffInspPack || 0), 0),
     diffInspBase: directForFactory.reduce((s, d) => s + (d.diffInspBase || 0), 0),
   }
-  directTotal.cost    = directTotal.packCost
-  directTotal.perPcs  = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
+  directTotal.cost   = directTotal.packCost
+  directTotal.perPcs = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
 
-  // 国内検品→検品会社 = 検品コストU列(baseVsDiff) + 直入庫Q列(diffInspBase)
-  const diffToInsp = (f) => inspByFactory(f).baseVsDiff + directByFactory(f).diffInspBase
+  const diffToInsp = (f, inspRows, dirRows) => {
+    const insp = inspByFactory(f, inspRows)
+    const dir  = directByFactory(f, dirRows)
+    return insp.baseVsDiff + dir.diffInspBase
+  }
   const diffToInspTotal = inspTotal.baseVsDiff + directTotal.diffInspBase
 
-  // 検品会社→直入庫 = I列（サンリーフは梱包費を足す）
-  const diffToDirect = (f) => {
-    const dir = directByFactory(f)
+  const diffToDirect = (f, dirRows) => {
+    const dir = directByFactory(f, dirRows)
     return f === 'サンリーフ' ? dir.diffInspPack + dir.packCost : dir.diffInspPack
   }
   const diffToDirectTotal = displayFactories.reduce((s, f) => s + diffToDirect(f), 0)
 
-  // 合計差額 = 国内検品→検品会社 + 検品会社→直入庫
-  const diffTotal = (f) => diffToInsp(f) + diffToDirect(f)
+  const diffTotal = (f, inspRows, dirRows) => diffToInsp(f, inspRows, dirRows) + diffToDirect(f, dirRows)
   const diffTotalAll = diffToInspTotal + diffToDirectTotal
+
+  // 推移用データ生成
+  const getTrendRows = (groupKey) => {
+    const periods = [...new Set([
+      ...inspData.map(d => d[groupKey]),
+      ...directData.map(d => d[groupKey]),
+      ...naishokuData.map(d => groupKey === 'year' ? d.yearMonth?.split('/')[0] : d.yearMonth),
+    ])].filter(Boolean).sort()
+
+    return periods.map(period => {
+      const inspRows = inspData.filter(d => d[groupKey] === period)
+      const dirRows  = directData.filter(d => d[groupKey] === period)
+      const nRows    = naishokuData.filter(d =>
+        groupKey === 'year' ? d.yearMonth?.startsWith(period) : d.yearMonth === period
+      )
+
+      const allFactories = [...new Set([...inspRows.map(d => d.factory), ...dirRows.map(d => d.factory)])].sort()
+
+      const nTotal = {
+        totalCost: nRows.reduce((s, d) => s + d.totalCost, 0),
+        totalQty:  nRows.reduce((s, d) => s + d.totalQty, 0),
+      }
+      nTotal.avgPrice = nTotal.totalQty > 0 ? nTotal.totalCost / nTotal.totalQty : 0
+
+      const iTotal = {
+        cost:      inspRows.reduce((s, d) => s + d.inspCost, 0),
+        qty:       inspRows.reduce((s, d) => s + d.totalQty, 0),
+        baseVsDiff: inspRows.reduce((s, d) => s + d.baseVsDiff, 0),
+      }
+      iTotal.perPcs = iTotal.qty > 0 ? iTotal.cost / iTotal.qty : 0
+
+      const dTotal = {
+        qty:          dirRows.reduce((s, d) => s + d.inspQty, 0),
+        packCost:     dirRows.reduce((s, d) => s + (d.packCost || 0), 0),
+        diffInspPack: dirRows.reduce((s, d) => s + (d.diffInspPack || 0), 0),
+        diffInspBase: dirRows.reduce((s, d) => s + (d.diffInspBase || 0), 0),
+      }
+      dTotal.cost   = dTotal.packCost
+      dTotal.perPcs = dTotal.qty > 0 ? dTotal.cost / dTotal.qty : 0
+
+      const d1 = iTotal.baseVsDiff + dTotal.diffInspBase
+      const d2 = allFactories.reduce((s, f) => {
+        const dir = directByFactory(f, dirRows)
+        return s + (f === 'サンリーフ' ? dir.diffInspPack + dir.packCost : dir.diffInspPack)
+      }, 0)
+      const d3 = d1 + d2
+
+      return { period, nTotal, iTotal, dTotal, d1, d2, d3 }
+    })
+  }
 
   const fmt  = (n) => Math.round(n).toLocaleString()
   const fmtD = (n) => isNaN(n) || !isFinite(n) ? '-' : n.toFixed(1)
   const color = (n) => ({ color: n > 0 ? 'green' : n < 0 ? 'red' : 'inherit' })
+
+  const isTrend = filterType === 'trendMonth' || filterType === 'trendYear'
+  const trendRows = isTrend ? getTrendRows(filterType === 'trendMonth' ? 'yearMonth' : 'year') : []
 
   return (
     <div>
@@ -119,6 +174,8 @@ export default function ComparisonTab({ inspData, directData }) {
             <option value="month">年月</option>
             <option value="year">年</option>
             <option value="all">全期間</option>
+            <option value="trendMonth">月別推移（全工場）</option>
+            <option value="trendYear">年別推移（全工場）</option>
           </select>
         </div>
         {filterType === 'month' && (
@@ -137,78 +194,122 @@ export default function ComparisonTab({ inspData, directData }) {
             </select>
           </div>
         )}
-        <div>
-          <label style={{ marginRight: 8 }}>工場：</label>
-          <select value={factory} onChange={e => setFactory(e.target.value)}>
-            <option value="all">全工場</option>
-            {factories.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </div>
+        {!isTrend && (
+          <div>
+            <label style={{ marginRight: 8 }}>工場：</label>
+            <select value={factory} onChange={e => setFactory(e.target.value)}>
+              <option value="all">全工場</option>
+              {factories.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
-          <thead>
-            <tr style={{ background: '#1e293b', color: 'white' }}>
-              <th rowSpan={2} style={th}>工場</th>
-              <th colSpan={3} style={th}>日本検品</th>
-              <th colSpan={3} style={th}>第三者検品会社</th>
-              <th colSpan={4} style={th}>直入庫</th>
-              <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
-            </tr>
-            <tr style={{ background: '#334155', color: 'white' }}>
-              <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-              <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-              <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
-              <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
-              <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
-              <th style={{ ...th, background: '#166534' }}>合計差額</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ fontWeight: 'bold', background: '#f1f5f9' }}>
-              <td style={td}>合計</td>
-              <td style={td}>{fmt(naishokuTotal.totalQty)}</td>
-              <td style={td}>¥{fmt(naishokuTotal.totalCost)}</td>
-              <td style={td}>{fmtD(naishokuTotal.avgPrice)}</td>
-              <td style={td}>{fmt(inspTotal.qty)}</td>
-              <td style={td}>¥{fmt(inspTotal.cost)}</td>
-              <td style={td}>{fmtD(inspTotal.perPcs)}</td>
-              <td style={td}>{fmt(directTotal.qty)}</td>
-              <td style={td}>¥{fmt(directTotal.cost)}</td>
-              <td style={td}>{fmtD(directTotal.perPcs)}</td>
-              <td style={td}>ー</td>
-              <td style={{ ...td, ...color(diffToInspTotal) }}>¥{fmt(diffToInspTotal)}</td>
-              <td style={{ ...td, ...color(diffToDirectTotal) }}>¥{fmt(diffToDirectTotal)}</td>
-              <td style={{ ...td, ...color(diffTotalAll) }}>¥{fmt(diffTotalAll)}</td>
-            </tr>
-            {displayFactories.map(f => {
-              const insp = inspByFactory(f)
-              const dir  = directByFactory(f)
-              const d1   = diffToInsp(f)
-              const d2   = diffToDirect(f)
-              const d3   = diffTotal(f)
-              return (
-                <tr key={f} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={td}>{f}</td>
-                  <td style={{ ...td, color: '#94a3b8' }}>ー</td>
-                  <td style={{ ...td, color: '#94a3b8' }}>ー</td>
-                  <td style={{ ...td, color: '#94a3b8' }}>ー</td>
-                  <td style={td}>{fmt(insp.qty)}</td>
-                  <td style={td}>¥{fmt(insp.cost)}</td>
-                  <td style={td}>{fmtD(insp.perPcs)}</td>
-                  <td style={td}>{fmt(dir.qty)}</td>
-                  <td style={td}>¥{fmt(dir.cost)}</td>
-                  <td style={td}>{fmtD(dir.perPcs)}</td>
-                  <td style={td}>{f === 'サンリーフ' ? '¥' + fmt(dir.packCost) : 'ー'}</td>
-                  <td style={{ ...td, ...color(d1) }}>¥{fmt(d1)}</td>
-                  <td style={{ ...td, ...color(d2) }}>¥{fmt(d2)}</td>
-                  <td style={{ ...td, ...color(d3) }}>¥{fmt(d3)}</td>
+        {isTrend ? (
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+            <thead>
+              <tr style={{ background: '#1e293b', color: 'white' }}>
+                <th rowSpan={2} style={th}>期間</th>
+                <th colSpan={3} style={th}>日本検品</th>
+                <th colSpan={3} style={th}>第三者検品会社</th>
+                <th colSpan={4} style={th}>直入庫</th>
+                <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
+              </tr>
+              <tr style={{ background: '#334155', color: 'white' }}>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
+                <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
+                <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
+                <th style={{ ...th, background: '#166534' }}>合計差額</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trendRows.map(r => (
+                <tr key={r.period} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ ...td, fontWeight: 'bold' }}>{r.period}</td>
+                  <td style={td}>{fmt(r.nTotal.totalQty)}</td>
+                  <td style={td}>¥{fmt(r.nTotal.totalCost)}</td>
+                  <td style={td}>{fmtD(r.nTotal.avgPrice)}</td>
+                  <td style={td}>{fmt(r.iTotal.qty)}</td>
+                  <td style={td}>¥{fmt(r.iTotal.cost)}</td>
+                  <td style={td}>{fmtD(r.iTotal.perPcs)}</td>
+                  <td style={td}>{fmt(r.dTotal.qty)}</td>
+                  <td style={td}>¥{fmt(r.dTotal.cost)}</td>
+                  <td style={td}>{fmtD(r.dTotal.perPcs)}</td>
+                  <td style={td}>ー</td>
+                  <td style={{ ...td, ...color(r.d1) }}>¥{fmt(r.d1)}</td>
+                  <td style={{ ...td, ...color(r.d2) }}>¥{fmt(r.d2)}</td>
+                  <td style={{ ...td, ...color(r.d3) }}>¥{fmt(r.d3)}</td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+            <thead>
+              <tr style={{ background: '#1e293b', color: 'white' }}>
+                <th rowSpan={2} style={th}>工場</th>
+                <th colSpan={3} style={th}>日本検品</th>
+                <th colSpan={3} style={th}>第三者検品会社</th>
+                <th colSpan={4} style={th}>直入庫</th>
+                <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
+              </tr>
+              <tr style={{ background: '#334155', color: 'white' }}>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
+                <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
+                <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
+                <th style={{ ...th, background: '#166534' }}>合計差額</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ fontWeight: 'bold', background: '#f1f5f9' }}>
+                <td style={td}>合計</td>
+                <td style={td}>{fmt(naishokuTotal.totalQty)}</td>
+                <td style={td}>¥{fmt(naishokuTotal.totalCost)}</td>
+                <td style={td}>{fmtD(naishokuTotal.avgPrice)}</td>
+                <td style={td}>{fmt(inspTotal.qty)}</td>
+                <td style={td}>¥{fmt(inspTotal.cost)}</td>
+                <td style={td}>{fmtD(inspTotal.perPcs)}</td>
+                <td style={td}>{fmt(directTotal.qty)}</td>
+                <td style={td}>¥{fmt(directTotal.cost)}</td>
+                <td style={td}>{fmtD(directTotal.perPcs)}</td>
+                <td style={td}>ー</td>
+                <td style={{ ...td, ...color(diffToInspTotal) }}>¥{fmt(diffToInspTotal)}</td>
+                <td style={{ ...td, ...color(diffToDirectTotal) }}>¥{fmt(diffToDirectTotal)}</td>
+                <td style={{ ...td, ...color(diffTotalAll) }}>¥{fmt(diffTotalAll)}</td>
+              </tr>
+              {displayFactories.map(f => {
+                const insp = inspByFactory(f)
+                const dir  = directByFactory(f)
+                const d1   = diffToInsp(f)
+                const d2   = diffToDirect(f)
+                const d3   = diffTotal(f)
+                return (
+                  <tr key={f} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={td}>{f}</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
+                    <td style={td}>{fmt(insp.qty)}</td>
+                    <td style={td}>¥{fmt(insp.cost)}</td>
+                    <td style={td}>{fmtD(insp.perPcs)}</td>
+                    <td style={td}>{fmt(dir.qty)}</td>
+                    <td style={td}>¥{fmt(dir.cost)}</td>
+                    <td style={td}>{fmtD(dir.perPcs)}</td>
+                    <td style={td}>{f === 'サンリーフ' ? '¥' + fmt(dir.packCost) : 'ー'}</td>
+                    <td style={{ ...td, ...color(d1) }}>¥{fmt(d1)}</td>
+                    <td style={{ ...td, ...color(d2) }}>¥{fmt(d2)}</td>
+                    <td style={{ ...td, ...color(d3) }}>¥{fmt(d3)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
