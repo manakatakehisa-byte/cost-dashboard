@@ -10,12 +10,12 @@ function aggregate(data, groupKey) {
     if (!map[key]) {
       map[key] = { period: d[groupKey], factory: d.factory, inspQty: 0, defectQty: 0, inspCost: 0, packCost: 0, diffInspPack: 0, base: 0, diffInspBase: 0 }
     }
-    map[key].inspQty += d.inspQty
-    map[key].defectQty += d.defectQty
-    map[key].inspCost += d.inspCost
-    map[key].packCost += d.packCost
+    map[key].inspQty     += d.inspQty
+    map[key].defectQty   += d.defectQty
+    map[key].inspCost    += d.inspCost
+    map[key].packCost    += d.packCost
     map[key].diffInspPack += d.diffInspPack
-    map[key].base += d.base
+    map[key].base        += d.base
     map[key].diffInspBase += d.diffInspBase
   })
   return Object.values(map).sort((a, b) => a.period.localeCompare(b.period))
@@ -32,14 +32,13 @@ export default function DirectTab({ data = [] }) {
   const groupKey = viewMode === 'month' ? 'yearMonth' : 'year'
   const rows = aggregate(filtered, groupKey)
 
-  // 合計行
   const total = rows.reduce((acc, r) => ({
-    inspQty: acc.inspQty + r.inspQty,
-    defectQty: acc.defectQty + r.defectQty,
-    inspCost: acc.inspCost + r.inspCost,
-    packCost: acc.packCost + r.packCost,
+    inspQty:      acc.inspQty      + r.inspQty,
+    defectQty:    acc.defectQty    + r.defectQty,
+    inspCost:     acc.inspCost     + r.inspCost,
+    packCost:     acc.packCost     + r.packCost,
     diffInspPack: acc.diffInspPack + r.diffInspPack,
-    base: acc.base + r.base,
+    base:         acc.base         + r.base,
     diffInspBase: acc.diffInspBase + r.diffInspBase,
   }), { inspQty: 0, defectQty: 0, inspCost: 0, packCost: 0, diffInspPack: 0, base: 0, diffInspBase: 0 })
 
@@ -49,7 +48,7 @@ export default function DirectTab({ data = [] }) {
       if (!map[r.period]) map[r.period] = { period: r.period, inspCost: 0, packCost: 0, base: 0 }
       map[r.period].inspCost += r.inspCost
       map[r.period].packCost += r.packCost
-      map[r.period].base += r.base
+      map[r.period].base     += r.base
     })
     return Object.values(map).sort((a, b) => a.period.localeCompare(b.period))
   })()
@@ -117,7 +116,7 @@ export default function DirectTab({ data = [] }) {
                 <td className="px-3 py-2 text-right">{fmt(r.packCost)}</td>
                 <td className="px-3 py-2 text-right">{fmt(r.base)}</td>
                 <td className="px-3 py-2 text-right font-medium">{diffCell(r.diffInspPack)}</td>
-                <td className="px-3 py-2 text-right font-medium">{diffCell(r.diffInspBase)}</td>
+                <td className="px-3 py-2 text-right font-medium">{diffCell(r.diffInspPack + r.diffInspBase)}</td>
               </tr>
             ))}
           </tbody>
@@ -130,7 +129,7 @@ export default function DirectTab({ data = [] }) {
               <td className="px-3 py-3 text-right">{fmt(total.packCost)}</td>
               <td className="px-3 py-3 text-right">{fmt(total.base)}</td>
               <td className="px-3 py-3 text-right">{diffCell(total.diffInspPack)}</td>
-              <td className="px-3 py-3 text-right">{diffCell(total.diffInspBase)}</td>
+              <td className="px-3 py-3 text-right">{diffCell(total.diffInspPack + total.diffInspBase)}</td>
             </tr>
           </tfoot>
         </table>
