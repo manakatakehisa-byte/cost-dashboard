@@ -58,13 +58,12 @@ export default function ComparisonTab({ inspData, directData }) {
     ? [...new Set([...inspFiltered.map(d => d.factory), ...directFiltered.map(d => d.factory)])].sort()
     : [factory]
 
-const inspByFactory = (f) => {
+  const inspByFactory = (f) => {
     const rows = inspFiltered.filter(d => d.factory === f)
-    const qty  = rows.reduce((s, d) => s + d.totalQty, 0)
-    const rawCost = rows.reduce((s, d) => s + d.inspCost, 0)
-    const dir  = directByFactory(f)
-    const cost = f === 'サンリーフ' ? rawCost - dir.packCost : rawCost
-    return { cost, qty, perPcs: qty > 0 ? cost / qty : 0 }
+    const cost     = rows.reduce((s, d) => s + d.inspCost, 0)
+    const qty      = rows.reduce((s, d) => s + d.totalQty, 0)
+    const baseVsDiff = rows.reduce((s, d) => s + d.baseVsDiff, 0)
+    return { cost, qty, perPcs: qty > 0 ? cost / qty : 0, baseVsDiff }
   }
 
   const directByFactory = (f) => {
@@ -73,16 +72,13 @@ const inspByFactory = (f) => {
     const packCost     = rows.reduce((s, d) => s + (d.packCost || 0), 0)
     const diffInspPack = rows.reduce((s, d) => s + (d.diffInspPack || 0), 0)
     const diffInspBase = rows.reduce((s, d) => s + (d.diffInspBase || 0), 0)
-    // サンリーフの検品費はI列-H列、それ以外はH列
-    const cost = f === 'サンリーフ'
-      ? diffInspPack - packCost
-      : packCost
-    return { cost, qty, perPcs: qty > 0 ? cost / qty : 0, packCost, diffInspPack, diffInspBase }
+    return { cost: packCost, qty, perPcs: qty > 0 ? packCost / qty : 0, packCost, diffInspPack, diffInspBase }
   }
 
   const inspTotal = {
-    cost: inspForFactory.reduce((s, d) => s + d.inspCost, 0),
-    qty:  inspForFactory.reduce((s, d) => s + d.totalQty, 0),
+    cost:      inspForFactory.reduce((s, d) => s + d.inspCost, 0),
+    qty:       inspForFactory.reduce((s, d) => s + d.totalQty, 0),
+    baseVsDiff: inspForFactory.reduce((s, d) => s + d.baseVsDiff, 0),
   }
   inspTotal.perPcs = inspTotal.qty > 0 ? inspTotal.cost / inspTotal.qty : 0
 
@@ -92,27 +88,23 @@ const inspByFactory = (f) => {
     diffInspPack: directForFactory.reduce((s, d) => s + (d.diffInspPack || 0), 0),
     diffInspBase: directForFactory.reduce((s, d) => s + (d.diffInspBase || 0), 0),
   }
-  directTotal.cost = displayFactories.reduce((s, f) => s + directByFactory(f).cost, 0)
-  directTotal.perPcs = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
+  directTotal.cost    = directTotal.packCost
+  directTotal.perPcs  = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
 
-  // 国内検品→検品会社 = 直入庫Q列のみ
-  const diffToInsp = (f) => directByFactory(f).diffInspBase
-  const diffToInspTotal = directTotal.diffInspBase
+  // 国内検品→検品会社 = 検品コストU列(baseVsDiff) + 直入庫Q列(diffInspBase)
+  const diffToInsp = (f) => inspByFactory(f).baseVsDiff + directByFactory(f).diffInspBase
+  const diffToInspTotal = inspTotal.baseVsDiff + directTotal.diffInspBase
 
-  // 検品会社→直入庫（サンリーフはH列を足す）
+  // 検品会社→直入庫 = I列（サンリーフは梱包費を足す）
   const diffToDirect = (f) => {
     const dir = directByFactory(f)
     return f === 'サンリーフ' ? dir.diffInspPack + dir.packCost : dir.diffInspPack
   }
   const diffToDirectTotal = displayFactories.reduce((s, f) => s + diffToDirect(f), 0)
 
-  // 国内検品→直入庫（サンリーフはH列を足す）
-  const diffNaishokuToDirect = (f) => {
-    const dir = directByFactory(f)
-    const base = dir.diffInspPack + dir.diffInspBase
-    return f === 'サンリーフ' ? base + dir.packCost : base
-  }
-  const diffNaishokuToDirectTotal = displayFactories.reduce((s, f) => s + diffNaishokuToDirect(f), 0)
+  // 合計差額 = 国内検品→検品会社 + 検品会社→直入庫
+  const diffTotal = (f) => diffToInsp(f) + diffToDirect(f)
+  const diffTotalAll = diffToInspTotal + diffToDirectTotal
 
   const fmt  = (n) => Math.round(n).toLocaleString()
   const fmtD = (n) => isNaN(n) || !isFinite(n) ? '-' : n.toFixed(1)
@@ -161,16 +153,16 @@ const inspByFactory = (f) => {
               <th rowSpan={2} style={th}>工場</th>
               <th colSpan={3} style={th}>日本検品</th>
               <th colSpan={3} style={th}>第三者検品会社</th>
-              <th colSpan={3} style={th}>直入庫</th>
+              <th colSpan={4} style={th}>直入庫</th>
               <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
             </tr>
             <tr style={{ background: '#334155', color: 'white' }}>
               <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
               <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-              <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+              <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
               <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
               <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
-              <th style={{ ...th, background: '#166534' }}>国内検品→直入庫</th>
+              <th style={{ ...th, background: '#166534' }}>合計差額</th>
             </tr>
           </thead>
           <tbody>
@@ -185,16 +177,17 @@ const inspByFactory = (f) => {
               <td style={td}>{fmt(directTotal.qty)}</td>
               <td style={td}>¥{fmt(directTotal.cost)}</td>
               <td style={td}>{fmtD(directTotal.perPcs)}</td>
+              <td style={td}>ー</td>
               <td style={{ ...td, ...color(diffToInspTotal) }}>¥{fmt(diffToInspTotal)}</td>
               <td style={{ ...td, ...color(diffToDirectTotal) }}>¥{fmt(diffToDirectTotal)}</td>
-              <td style={{ ...td, ...color(diffNaishokuToDirectTotal) }}>¥{fmt(diffNaishokuToDirectTotal)}</td>
+              <td style={{ ...td, ...color(diffTotalAll) }}>¥{fmt(diffTotalAll)}</td>
             </tr>
             {displayFactories.map(f => {
               const insp = inspByFactory(f)
               const dir  = directByFactory(f)
               const d1   = diffToInsp(f)
               const d2   = diffToDirect(f)
-              const d3   = diffNaishokuToDirect(f)
+              const d3   = diffTotal(f)
               return (
                 <tr key={f} style={{ borderBottom: '1px solid #e2e8f0' }}>
                   <td style={td}>{f}</td>
@@ -207,6 +200,7 @@ const inspByFactory = (f) => {
                   <td style={td}>{fmt(dir.qty)}</td>
                   <td style={td}>¥{fmt(dir.cost)}</td>
                   <td style={td}>{fmtD(dir.perPcs)}</td>
+                  <td style={td}>{f === 'サンリーフ' ? '¥' + fmt(dir.packCost) : 'ー'}</td>
                   <td style={{ ...td, ...color(d1) }}>¥{fmt(d1)}</td>
                   <td style={{ ...td, ...color(d2) }}>¥{fmt(d2)}</td>
                   <td style={{ ...td, ...color(d3) }}>¥{fmt(d3)}</td>
