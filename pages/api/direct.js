@@ -1,12 +1,9 @@
 import { getSheetData, toNum, toYearMonth, toYear } from '../../lib/sheets'
-
 export default async function handler(req, res) {
   try {
     const sheetName = process.env.DIRECT_SHEET_NAME || '直入庫コスト'
     const rows = await getSheetData(sheetName)
-
     if (rows.length < 3) return res.status(200).json([])
-
     const col = {
       date:          0,  // A 報告日
       factory:       1,  // B 工場名
@@ -19,7 +16,6 @@ export default async function handler(req, res) {
       base:          9,  // J BASE
       diffInspBase:  16, // Q 検品費とBASEの差額
     }
-
     const data = []
     for (let i = 2; i < rows.length; i++) {
       const r = rows[i]
@@ -27,7 +23,6 @@ export default async function handler(req, res) {
       const ym = toYearMonth(rawDate)
       const year = toYear(rawDate)
       if (!ym && !year) continue
-
       data.push({
         yearMonth:    ym,
         year,
@@ -42,7 +37,6 @@ export default async function handler(req, res) {
         diffInspBase: Math.round(toNum(r[col.diffInspBase])),
       })
     }
-
     res.status(200).json(data)
   } catch (e) {
     console.error(e)
