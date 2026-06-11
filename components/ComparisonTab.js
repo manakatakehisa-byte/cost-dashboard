@@ -37,7 +37,6 @@ export default function ComparisonTab({ inspData, directData }) {
   const filterByDate = (data) => {
     if (filterType === 'month') return data.filter(d => d.yearMonth === yearMonth)
     if (filterType === 'year')  return data.filter(d => d.yearMonth?.startsWith(year))
-    if (filterType === 'all' || filterType === 'trendMonth' || filterType === 'trendYear') return data
     return data
   }
 
@@ -61,8 +60,8 @@ export default function ComparisonTab({ inspData, directData }) {
 
   const inspByFactory = (f, inspRows) => {
     const rows = (inspRows || inspFiltered).filter(d => d.factory === f)
-    const cost      = rows.reduce((s, d) => s + d.inspCost, 0)
-    const qty       = rows.reduce((s, d) => s + d.totalQty, 0)
+    const cost       = rows.reduce((s, d) => s + d.inspCost, 0)
+    const qty        = rows.reduce((s, d) => s + d.totalQty, 0)
     const baseVsDiff = rows.reduce((s, d) => s + d.baseVsDiff, 0)
     return { cost, qty, perPcs: qty > 0 ? cost / qty : 0, baseVsDiff }
   }
@@ -77,8 +76,8 @@ export default function ComparisonTab({ inspData, directData }) {
   }
 
   const inspTotal = {
-    cost:      inspForFactory.reduce((s, d) => s + d.inspCost, 0),
-    qty:       inspForFactory.reduce((s, d) => s + d.totalQty, 0),
+    cost:       inspForFactory.reduce((s, d) => s + d.inspCost, 0),
+    qty:        inspForFactory.reduce((s, d) => s + d.totalQty, 0),
     baseVsDiff: inspForFactory.reduce((s, d) => s + d.baseVsDiff, 0),
   }
   inspTotal.perPcs = inspTotal.qty > 0 ? inspTotal.cost / inspTotal.qty : 0
@@ -108,7 +107,6 @@ export default function ComparisonTab({ inspData, directData }) {
   const diffTotal = (f, inspRows, dirRows) => diffToInsp(f, inspRows, dirRows) + diffToDirect(f, dirRows)
   const diffTotalAll = diffToInspTotal + diffToDirectTotal
 
-  // 推移用データ生成
   const getTrendRows = (groupKey) => {
     const periods = [...new Set([
       ...inspData.map(d => d[groupKey]),
@@ -132,8 +130,8 @@ export default function ComparisonTab({ inspData, directData }) {
       nTotal.avgPrice = nTotal.totalQty > 0 ? nTotal.totalCost / nTotal.totalQty : 0
 
       const iTotal = {
-        cost:      inspRows.reduce((s, d) => s + d.inspCost, 0),
-        qty:       inspRows.reduce((s, d) => s + d.totalQty, 0),
+        cost:       inspRows.reduce((s, d) => s + d.inspCost, 0),
+        qty:        inspRows.reduce((s, d) => s + d.totalQty, 0),
         baseVsDiff: inspRows.reduce((s, d) => s + d.baseVsDiff, 0),
       }
       iTotal.perPcs = iTotal.qty > 0 ? iTotal.cost / iTotal.qty : 0
@@ -154,7 +152,11 @@ export default function ComparisonTab({ inspData, directData }) {
       }, 0)
       const d3 = d1 + d2
 
-      return { period, nTotal, iTotal, dTotal, d1, d2, d3 }
+      const saanriifuPackCost = dirRows
+        .filter(d => d.factory === 'サンリーフ')
+        .reduce((s, d) => s + (d.packCost || 0), 0)
+
+      return { period, nTotal, iTotal, dTotal, d1, d2, d3, saanriifuPackCost }
     })
   }
 
@@ -238,7 +240,7 @@ export default function ComparisonTab({ inspData, directData }) {
                   <td style={td}>{fmt(r.dTotal.qty)}</td>
                   <td style={td}>¥{fmt(r.dTotal.cost)}</td>
                   <td style={td}>{fmtD(r.dTotal.perPcs)}</td>
-                  <td style={td}>ー</td>
+                  <td style={td}>{r.saanriifuPackCost ? '¥' + fmt(r.saanriifuPackCost) : 'ー'}</td>
                   <td style={{ ...td, ...color(r.d1) }}>¥{fmt(r.d1)}</td>
                   <td style={{ ...td, ...color(r.d2) }}>¥{fmt(r.d2)}</td>
                   <td style={{ ...td, ...color(r.d3) }}>¥{fmt(r.d3)}</td>
