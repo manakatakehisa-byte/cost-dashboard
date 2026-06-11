@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import InspectionTab from '../components/InspectionTab'
 import DirectTab from '../components/DirectTab'
+import ComparisonTab from '../components/ComparisonTab'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -103,6 +104,7 @@ export default function Dashboard() {
             {[
               { id: 'inspection', label: '🔍 検品コスト', desc: '工場・検品会社別' },
               { id: 'direct',     label: '📦 直入庫コスト', desc: '工場別' },
+              { id: 'comparison', label: '📊 コスト比較', desc: '工場別比較' },
             ].map(t => (
               <button
                 key={t.id}
@@ -139,6 +141,7 @@ export default function Dashboard() {
           <>
             {tab === 'inspection' && <InspectionTab data={inspData} />}
             {tab === 'direct'     && <DirectTab     data={directData} />}
+             {tab === 'comparison' && <ComparisonTab inspData={inspData} directData={directData} />}
           </>
         )}
       </main>
