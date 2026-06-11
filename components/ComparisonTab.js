@@ -94,11 +94,9 @@ export default function ComparisonTab({ inspData, directData }) {
   directTotal.perPcs = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
 
   // 差額計算
-  // 国内検品→検品会社 = 直入庫Q列 + 検品コストU列(diff)
-  const diffToInsp = (f) => {
-    const insp = inspByFactory(f)
-    const dir  = directByFactory(f)
-    return dir.diffInspBase + insp.diff
+// 国内検品→検品会社 = 直入庫Q列のみ
+  const diffToInsp = (f) => directByFactory(f).diffInspBase
+  const diffToInspTotal = directTotal.diffInspBase
   }
   const diffToInspTotal = directTotal.diffInspBase + inspTotal.diff
 
@@ -106,11 +104,10 @@ export default function ComparisonTab({ inspData, directData }) {
   const diffToDirect = (f) => directByFactory(f).diffInspPack
   const diffToDirectTotal = directTotal.diffInspPack
 
-  // 国内検品→直入庫 = Q列 + 検品コストU列 + I列（サンリーフはH列を引く）
+ // 国内検品→直入庫 = I列 + Q列（サンリーフはH列を引く）
   const diffNaishokuToDirect = (f) => {
-    const insp = inspByFactory(f)
-    const dir  = directByFactory(f)
-    const base = dir.diffInspBase + insp.diff + dir.diffInspPack
+    const dir = directByFactory(f)
+    const base = dir.diffInspPack + dir.diffInspBase
     return f === 'サンリーフ' ? base - dir.packCost : base
   }
   const diffNaishokuToDirectTotal = displayFactories.reduce((s, f) => s + diffNaishokuToDirect(f), 0)
