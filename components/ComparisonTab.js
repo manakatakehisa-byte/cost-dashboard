@@ -242,7 +242,7 @@ export default function ComparisonTab({ inspData, directData }) {
 
       <div style={{ overflowX: 'auto' }}>
         {isTrend ? (
-          <table style={{ borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 10, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>期間</th>
@@ -293,7 +293,7 @@ export default function ComparisonTab({ inspData, directData }) {
             </tbody>
           </table>
         ) : (
-          <table style={{ borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 10, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>工場</th>
@@ -432,5 +432,5 @@ export default function ComparisonTab({ inspData, directData }) {
 }
 
 
-const th = { padding: '5px 6px', border: '1px solid #475569', textAlign: 'center' }
-const td = { padding: '4px 6px', border: '1px solid #e2e8f0', textAlign: 'right' }
+const th = { padding: '3px 4px', border: '1px solid #475569', textAlign: 'center', whiteSpace: 'normal', wordBreak: 'keep-all', lineHeight: 1.2 }
+const td = { padding: '3px 5px', border: '1px solid #e2e8f0', textAlign: 'right', whiteSpace: 'nowrap' }
