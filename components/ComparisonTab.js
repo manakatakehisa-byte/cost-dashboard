@@ -48,12 +48,18 @@ export default function ComparisonTab({ inspData, directData }) {
   const inspForFactory   = factory === 'all' ? inspFiltered   : inspFiltered.filter(d => d.factory === factory)
   const directForFactory = factory === 'all' ? directFiltered : directFiltered.filter(d => d.factory === factory)
 
-  const naishokuTotal = {
-    totalCost: naishokuFiltered.reduce((s, d) => s + d.totalCost, 0),
-    totalQty:  naishokuFiltered.reduce((s, d) => s + d.totalQty, 0),
+  const japanTotal = {
+    cost: naishokuFiltered.reduce((s, d) => s + (d.japanCost || 0), 0),
+    qty:  naishokuFiltered.reduce((s, d) => s + (d.japanQty || 0), 0),
   }
-  naishokuTotal.avgPrice = naishokuTotal.totalQty > 0
-    ? naishokuTotal.totalCost / naishokuTotal.totalQty : 0
+  japanTotal.avgPrice = japanTotal.qty > 0 ? japanTotal.cost / japanTotal.qty : 0
+
+  const naishokuFactoryTotal = {
+    cost: naishokuFiltered.reduce((s, d) => s + (d.factoryCost || 0), 0),
+    qty:  naishokuFiltered.reduce((s, d) => s + (d.factoryQty || 0), 0),
+  }
+  naishokuFactoryTotal.avgPrice = naishokuFactoryTotal.qty > 0
+    ? naishokuFactoryTotal.cost / naishokuFactoryTotal.qty : 0
 
   const displayFactories = factory === 'all'
     ? [...new Set([...inspFiltered.map(d => d.factory), ...directFiltered.map(d => d.factory)])].sort()
@@ -140,11 +146,17 @@ export default function ComparisonTab({ inspData, directData }) {
 
       const allFactories = [...new Set([...inspRows.map(d => d.factory), ...dirRows.map(d => d.factory)])].sort()
 
-      const nTotal = {
-        totalCost: nRows.reduce((s, d) => s + d.totalCost, 0),
-        totalQty:  nRows.reduce((s, d) => s + d.totalQty, 0),
+      const jTotal = {
+        cost: nRows.reduce((s, d) => s + (d.japanCost || 0), 0),
+        qty:  nRows.reduce((s, d) => s + (d.japanQty || 0), 0),
       }
-      nTotal.avgPrice = nTotal.totalQty > 0 ? nTotal.totalCost / nTotal.totalQty : 0
+      jTotal.avgPrice = jTotal.qty > 0 ? jTotal.cost / jTotal.qty : 0
+
+      const fTotal = {
+        cost: nRows.reduce((s, d) => s + (d.factoryCost || 0), 0),
+        qty:  nRows.reduce((s, d) => s + (d.factoryQty || 0), 0),
+      }
+      fTotal.avgPrice = fTotal.qty > 0 ? fTotal.cost / fTotal.qty : 0
 
       const iTotal = {
         cost:       inspRows.reduce((s, d) => s + d.inspCost, 0),
@@ -177,7 +189,7 @@ export default function ComparisonTab({ inspData, directData }) {
         .filter(d => d.factory === 'サンリーフ')
         .reduce((s, d) => s + (d.packCost || 0), 0)
 
-      return { period, nTotal, iTotal, dTotal, d1, d2, d3, saanriifuPackCost }
+      return { period, jTotal, fTotal, iTotal, dTotal, d1, d2, d3, saanriifuPackCost }
     })
   }
 
@@ -245,10 +257,12 @@ export default function ComparisonTab({ inspData, directData }) {
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>期間</th>
                 <th colSpan={3} style={th}>日本検品</th>
+                <th colSpan={3} style={th}>場内検品</th>
                 <th colSpan={showGoodQty ? 5 : 3} style={th}>第三者検品会社</th>
                 <th colSpan={showGoodQty ? 6 : 4} style={th}>直入庫</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
                 <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
                 <th style={th}>検品数</th>
                 {showGoodQty && <th style={th}>良品数</th>}
@@ -267,9 +281,12 @@ export default function ComparisonTab({ inspData, directData }) {
               {trendRows.map(r => (
                 <tr key={r.period} style={{ borderBottom: '1px solid #e2e8f0' }}>
                   <td style={{ ...td, fontWeight: 'bold' }}>{r.period}</td>
-                  <td style={td}>{fmt(r.nTotal.totalQty)}</td>
-                  <td style={td}>¥{fmt(r.nTotal.totalCost)}</td>
-                  <td style={td}>{fmtD(r.nTotal.avgPrice)}</td>
+                  <td style={td}>{fmt(r.jTotal.qty)}</td>
+                  <td style={td}>¥{fmt(r.jTotal.cost)}</td>
+                  <td style={td}>{fmtD(r.jTotal.avgPrice)}</td>
+                  <td style={td}>{fmt(r.fTotal.qty)}</td>
+                  <td style={td}>¥{fmt(r.fTotal.cost)}</td>
+                  <td style={td}>{fmtD(r.fTotal.avgPrice)}</td>
                   <td style={td}>{fmt(r.iTotal.qty)}</td>
                   {showGoodQty && <td style={td}>{fmt(r.iTotal.goodQty)}</td>}
                   <td style={td}>¥{fmt(r.iTotal.cost)}</td>
@@ -291,10 +308,12 @@ export default function ComparisonTab({ inspData, directData }) {
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>工場</th>
                 <th colSpan={3} style={th}>日本検品</th>
+                <th colSpan={3} style={th}>場内検品</th>
                 <th colSpan={showGoodQty ? 5 : 3} style={th}>第三者検品会社</th>
                 <th colSpan={showGoodQty ? 6 : 4} style={th}>直入庫</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
                 <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
                 <th style={th}>検品数</th>
                 {showGoodQty && <th style={th}>良品数</th>}
@@ -312,9 +331,12 @@ export default function ComparisonTab({ inspData, directData }) {
             <tbody>
               <tr style={{ fontWeight: 'bold', background: '#f1f5f9' }}>
                 <td style={td}>合計</td>
-                <td style={td}>{fmt(naishokuTotal.totalQty)}</td>
-                <td style={td}>¥{fmt(naishokuTotal.totalCost)}</td>
-                <td style={td}>{fmtD(naishokuTotal.avgPrice)}</td>
+                <td style={td}>{fmt(japanTotal.qty)}</td>
+                <td style={td}>¥{fmt(japanTotal.cost)}</td>
+                <td style={td}>{fmtD(japanTotal.avgPrice)}</td>
+                <td style={td}>{fmt(naishokuFactoryTotal.qty)}</td>
+                <td style={td}>¥{fmt(naishokuFactoryTotal.cost)}</td>
+                <td style={td}>{fmtD(naishokuFactoryTotal.avgPrice)}</td>
                 <td style={td}>{fmt(inspTotal.qty)}</td>
                 {showGoodQty && <td style={td}>{fmt(inspTotal.goodQty)}</td>}
                 <td style={td}>¥{fmt(inspTotal.cost)}</td>
@@ -333,6 +355,9 @@ export default function ComparisonTab({ inspData, directData }) {
                 return (
                   <tr key={f} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={td}>{f}</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
+                    <td style={{ ...td, color: '#94a3b8' }}>ー</td>
                     <td style={{ ...td, color: '#94a3b8' }}>ー</td>
                     <td style={{ ...td, color: '#94a3b8' }}>ー</td>
                     <td style={{ ...td, color: '#94a3b8' }}>ー</td>
