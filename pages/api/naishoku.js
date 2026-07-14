@@ -23,16 +23,18 @@ export default async function handler(req, res) {
       const ym = parseJapaneseYearMonth(rawDate)
       if (!ym) continue
 
-      const hhCost    = toNum(r[1])
-      const hhQty     = toNum(r[2])
-      const trustCost = toNum(r[4])
-      const trustQty  = toNum(r[5])
-      const jisaCost  = toNum(r[7])
-      const jisaQty   = toNum(r[8])
-      const avgPrice  = toNum(r[10])
+      const hhCost      = toNum(r[1])
+      const hhQty       = toNum(r[2])
+      const trustCost   = toNum(r[4])
+      const trustQty    = toNum(r[5])
+      const jisaCost    = toNum(r[7])
+      const jisaQty     = toNum(r[8])
+      const factoryCost = toNum(r[11]) // L: 場内内職費
+      const factoryQty  = toNum(r[12]) // M: 場内内職数
 
-      const totalCost = hhCost + trustCost + jisaCost
-      const totalQty  = hhQty + trustQty + jisaQty
+      const totalCost = hhCost + trustCost + jisaCost + factoryCost
+      const totalQty  = hhQty + trustQty + jisaQty + factoryQty
+      const avgPrice  = totalQty > 0 ? totalCost / totalQty : 0
 
       data.push({
         yearMonth: ym,
