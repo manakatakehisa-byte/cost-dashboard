@@ -23,13 +23,17 @@ export default async function handler(req, res) {
       const ym = toYearMonth(rawDate)
       const year = toYear(rawDate)
       if (!ym && !year) continue
+      const inspQtyVal   = Math.round(toNum(r[col.inspQty]))
+      const defectQtyVal = Math.round(toNum(r[col.defectQty]))
+
       data.push({
         yearMonth:    ym,
         year,
         factory:      r[col.factory] || '',
         itemCode:     r[col.itemCode] || '',
-        inspQty:      Math.round(toNum(r[col.inspQty])),
-        defectQty:    Math.round(toNum(r[col.defectQty])),
+        inspQty:      inspQtyVal,
+        defectQty:    defectQtyVal,
+        goodQty:      inspQtyVal - defectQtyVal,
         inspCost:     Math.round(toNum(r[col.inspCost])),
         packCost:     Math.round(toNum(r[col.packCost])),
         diffInspPack: Math.round(toNum(r[col.diffInspPack])),
