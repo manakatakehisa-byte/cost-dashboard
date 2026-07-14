@@ -32,12 +32,27 @@ export default async function handler(req, res) {
       const factoryCost = toNum(r[11]) // L: 場内内職費
       const factoryQty  = toNum(r[12]) // M: 場内内職数
 
-      const totalCost = hhCost + trustCost + jisaCost + factoryCost
-      const totalQty  = hhQty + trustQty + jisaQty + factoryQty
+      // 日本検品（H.H + トラスト + 自社）
+      const japanCost = hhCost + trustCost + jisaCost
+      const japanQty  = hhQty + trustQty + jisaQty
+      const japanAvgPrice = japanQty > 0 ? japanCost / japanQty : 0
+
+      // 場内検品（L・M列）
+      const factoryAvgPrice = factoryQty > 0 ? factoryCost / factoryQty : 0
+
+      // 参考: 両方合計した値も一応残しておく
+      const totalCost = japanCost + factoryCost
+      const totalQty  = japanQty + factoryQty
       const avgPrice  = totalQty > 0 ? totalCost / totalQty : 0
 
       data.push({
         yearMonth: ym,
+        japanCost,
+        japanQty,
+        japanAvgPrice,
+        factoryCost,
+        factoryQty,
+        factoryAvgPrice,
         totalCost,
         totalQty,
         avgPrice,
