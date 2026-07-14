@@ -64,7 +64,12 @@ export default function ComparisonTab({ inspData, directData }) {
     const qty        = rows.reduce((s, d) => s + d.totalQty, 0)
     const goodQty    = rows.reduce((s, d) => s + (d.goodQty || 0), 0)
     const baseVsDiff = rows.reduce((s, d) => s + d.baseVsDiff, 0)
-    return { cost, qty, goodQty, perPcs: qty > 0 ? cost / qty : 0, baseVsDiff }
+    return {
+      cost, qty, goodQty,
+      perPcs: qty > 0 ? cost / qty : 0,
+      perPcsGood: goodQty > 0 ? cost / goodQty : 0,
+      baseVsDiff,
+    }
   }
 
   const directByFactory = (f, dirRows) => {
@@ -74,7 +79,12 @@ export default function ComparisonTab({ inspData, directData }) {
     const packCost     = rows.reduce((s, d) => s + (d.packCost || 0), 0)
     const diffInspPack = rows.reduce((s, d) => s + (d.diffInspPack || 0), 0)
     const diffInspBase = rows.reduce((s, d) => s + (d.diffInspBase || 0), 0)
-    return { cost: packCost, qty, goodQty, perPcs: qty > 0 ? packCost / qty : 0, packCost, diffInspPack, diffInspBase }
+    return {
+      cost: packCost, qty, goodQty,
+      perPcs: qty > 0 ? packCost / qty : 0,
+      perPcsGood: goodQty > 0 ? packCost / goodQty : 0,
+      packCost, diffInspPack, diffInspBase,
+    }
   }
 
   const inspTotal = {
@@ -84,6 +94,7 @@ export default function ComparisonTab({ inspData, directData }) {
     baseVsDiff: inspForFactory.reduce((s, d) => s + d.baseVsDiff, 0),
   }
   inspTotal.perPcs = inspTotal.qty > 0 ? inspTotal.cost / inspTotal.qty : 0
+  inspTotal.perPcsGood = inspTotal.goodQty > 0 ? inspTotal.cost / inspTotal.goodQty : 0
 
   const directTotal = {
     qty:          directForFactory.reduce((s, d) => s + d.inspQty, 0),
@@ -94,6 +105,7 @@ export default function ComparisonTab({ inspData, directData }) {
   }
   directTotal.cost   = directTotal.packCost
   directTotal.perPcs = directTotal.qty > 0 ? directTotal.cost / directTotal.qty : 0
+  directTotal.perPcsGood = directTotal.goodQty > 0 ? directTotal.cost / directTotal.goodQty : 0
 
   const diffToInsp = (f, inspRows, dirRows) => {
     const insp = inspByFactory(f, inspRows)
@@ -140,6 +152,7 @@ export default function ComparisonTab({ inspData, directData }) {
         baseVsDiff: inspRows.reduce((s, d) => s + d.baseVsDiff, 0),
       }
       iTotal.perPcs = iTotal.qty > 0 ? iTotal.cost / iTotal.qty : 0
+      iTotal.perPcsGood = iTotal.goodQty > 0 ? iTotal.cost / iTotal.goodQty : 0
 
       const dTotal = {
         qty:          dirRows.reduce((s, d) => s + d.inspQty, 0),
@@ -150,6 +163,7 @@ export default function ComparisonTab({ inspData, directData }) {
       }
       dTotal.cost   = dTotal.packCost
       dTotal.perPcs = dTotal.qty > 0 ? dTotal.cost / dTotal.qty : 0
+      dTotal.perPcsGood = dTotal.goodQty > 0 ? dTotal.cost / dTotal.goodQty : 0
 
       const d1 = iTotal.baseVsDiff + dTotal.diffInspBase
       const d2 = allFactories.reduce((s, f) => {
@@ -220,14 +234,14 @@ export default function ComparisonTab({ inspData, directData }) {
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>期間</th>
                 <th colSpan={3} style={th}>日本検品</th>
-                <th colSpan={4} style={th}>第三者検品会社</th>
-                <th colSpan={5} style={th}>直入庫</th>
+                <th colSpan={5} style={th}>第三者検品会社</th>
+                <th colSpan={6} style={th}>直入庫</th>
                 <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
                 <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
+                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th><th style={th}>1PCS（良品数）</th>
+                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th><th style={th}>1PCS（良品数）</th><th style={th}>備考（梱包費）</th>
                 <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
                 <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
                 <th style={{ ...th, background: '#166534' }}>合計差額</th>
@@ -244,10 +258,12 @@ export default function ComparisonTab({ inspData, directData }) {
                   <td style={td}>{fmt(r.iTotal.goodQty)}</td>
                   <td style={td}>¥{fmt(r.iTotal.cost)}</td>
                   <td style={td}>{fmtD(r.iTotal.perPcs)}</td>
+                  <td style={td}>{fmtD(r.iTotal.perPcsGood)}</td>
                   <td style={td}>{fmt(r.dTotal.qty)}</td>
                   <td style={td}>{fmt(r.dTotal.goodQty)}</td>
                   <td style={td}>¥{fmt(r.dTotal.cost)}</td>
                   <td style={td}>{fmtD(r.dTotal.perPcs)}</td>
+                  <td style={td}>{fmtD(r.dTotal.perPcsGood)}</td>
                   <td style={td}>{r.saanriifuPackCost ? '¥' + fmt(r.saanriifuPackCost) : 'ー'}</td>
                   <td style={{ ...td, ...color(r.d1) }}>¥{fmt(r.d1)}</td>
                   <td style={{ ...td, ...color(r.d2) }}>¥{fmt(r.d2)}</td>
@@ -262,14 +278,14 @@ export default function ComparisonTab({ inspData, directData }) {
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>工場</th>
                 <th colSpan={3} style={th}>日本検品</th>
-                <th colSpan={4} style={th}>第三者検品会社</th>
-                <th colSpan={5} style={th}>直入庫</th>
+                <th colSpan={5} style={th}>第三者検品会社</th>
+                <th colSpan={6} style={th}>直入庫</th>
                 <th colSpan={3} style={{ ...th, background: '#166534' }}>コスト削減差額</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
                 <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS</th><th style={th}>備考（梱包費）</th>
+                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th><th style={th}>1PCS（良品数）</th>
+                <th style={th}>検品数</th><th style={th}>良品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th><th style={th}>1PCS（良品数）</th><th style={th}>備考（梱包費）</th>
                 <th style={{ ...th, background: '#166534' }}>国内検品→検品会社</th>
                 <th style={{ ...th, background: '#166534' }}>検品会社→直入庫</th>
                 <th style={{ ...th, background: '#166534' }}>合計差額</th>
@@ -285,10 +301,12 @@ export default function ComparisonTab({ inspData, directData }) {
                 <td style={td}>{fmt(inspTotal.goodQty)}</td>
                 <td style={td}>¥{fmt(inspTotal.cost)}</td>
                 <td style={td}>{fmtD(inspTotal.perPcs)}</td>
+                <td style={td}>{fmtD(inspTotal.perPcsGood)}</td>
                 <td style={td}>{fmt(directTotal.qty)}</td>
                 <td style={td}>{fmt(directTotal.goodQty)}</td>
                 <td style={td}>¥{fmt(directTotal.cost)}</td>
                 <td style={td}>{fmtD(directTotal.perPcs)}</td>
+                <td style={td}>{fmtD(directTotal.perPcsGood)}</td>
                 <td style={td}>ー</td>
                 <td style={{ ...td, ...color(diffToInspTotal) }}>¥{fmt(diffToInspTotal)}</td>
                 <td style={{ ...td, ...color(diffToDirectTotal) }}>¥{fmt(diffToDirectTotal)}</td>
@@ -310,10 +328,12 @@ export default function ComparisonTab({ inspData, directData }) {
                     <td style={td}>{fmt(insp.goodQty)}</td>
                     <td style={td}>¥{fmt(insp.cost)}</td>
                     <td style={td}>{fmtD(insp.perPcs)}</td>
+                    <td style={td}>{fmtD(insp.perPcsGood)}</td>
                     <td style={td}>{fmt(dir.qty)}</td>
                     <td style={td}>{fmt(dir.goodQty)}</td>
                     <td style={td}>¥{fmt(dir.cost)}</td>
                     <td style={td}>{fmtD(dir.perPcs)}</td>
+                    <td style={td}>{fmtD(dir.perPcsGood)}</td>
                     <td style={td}>{f === 'サンリーフ' ? '¥' + fmt(dir.packCost) : 'ー'}</td>
                     <td style={{ ...td, ...color(d1) }}>¥{fmt(d1)}</td>
                     <td style={{ ...td, ...color(d2) }}>¥{fmt(d2)}</td>
