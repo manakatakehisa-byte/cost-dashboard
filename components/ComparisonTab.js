@@ -9,7 +9,7 @@ export default function ComparisonTab({ inspData, directData }) {
   const [years, setYears] = useState([])
   const [factory, setFactory] = useState('all')
   const [factories, setFactories] = useState([])
-  const [showGoodQty, setShowGoodQty] = useState(false)
+  const showGoodQty = true // 良品数・良品ベース1PCSは常に表示
 
   useEffect(() => {
     fetch('/api/naishoku').then(r => r.json()).then(setNaishokuData)
@@ -238,21 +238,11 @@ export default function ComparisonTab({ inspData, directData }) {
             </select>
           </div>
         )}
-        <div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showGoodQty}
-              onChange={e => setShowGoodQty(e.target.checked)}
-            />
-            良品数・良品ベース1PCSも表示
-          </label>
-        </div>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
         {isTrend ? (
-          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>期間</th>
@@ -262,8 +252,8 @@ export default function ComparisonTab({ inspData, directData }) {
                 <th colSpan={showGoodQty ? 6 : 4} style={th}>直入庫</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
-                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th>
                 <th style={th}>検品数</th>
                 {showGoodQty && <th style={th}>良品数</th>}
                 <th style={th}>検品費</th>
@@ -303,7 +293,7 @@ export default function ComparisonTab({ inspData, directData }) {
             </tbody>
           </table>
         ) : (
-          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#1e293b', color: 'white' }}>
                 <th rowSpan={2} style={th}>工場</th>
@@ -313,8 +303,8 @@ export default function ComparisonTab({ inspData, directData }) {
                 <th colSpan={showGoodQty ? 6 : 4} style={th}>直入庫</th>
               </tr>
               <tr style={{ background: '#334155', color: 'white' }}>
-                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
-                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th>
+                <th style={th}>検品数</th><th style={th}>検品費</th><th style={th}>1PCS（検品数）</th>
                 <th style={th}>検品数</th>
                 {showGoodQty && <th style={th}>良品数</th>}
                 <th style={th}>検品費</th>
@@ -383,7 +373,7 @@ export default function ComparisonTab({ inspData, directData }) {
       <h3 style={{ marginTop: 24, marginBottom: 8, fontSize: 15 }}>コスト削減差額</h3>
       <div style={{ overflowX: 'auto' }}>
         {isTrend ? (
-          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#166534', color: 'white' }}>
                 <th style={th}>期間</th>
@@ -404,7 +394,7 @@ export default function ComparisonTab({ inspData, directData }) {
             </tbody>
           </table>
         ) : (
-          <table style={{ borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#166534', color: 'white' }}>
                 <th style={th}>工場</th>
@@ -442,5 +432,5 @@ export default function ComparisonTab({ inspData, directData }) {
 }
 
 
-const th = { padding: '8px 12px', border: '1px solid #475569', textAlign: 'center' }
-const td = { padding: '6px 12px', border: '1px solid #e2e8f0', textAlign: 'right' }
+const th = { padding: '5px 6px', border: '1px solid #475569', textAlign: 'center' }
+const td = { padding: '4px 6px', border: '1px solid #e2e8f0', textAlign: 'right' }
