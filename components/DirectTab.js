@@ -24,12 +24,23 @@ function aggregate(data, groupKey) {
 export default function DirectTab({ data = [] }) {
   const [viewMode, setViewMode] = useState('month')
   const [selectedFactory, setSelectedFactory] = useState('all')
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
 
   if (!data.length) return <div className="p-8 text-center text-gray-500">データがありません</div>
 
   const factories = ['all', ...Array.from(new Set(data.map(d => d.factory))).sort()]
-  const filtered = selectedFactory === 'all' ? data : data.filter(d => d.factory === selectedFactory)
-  const groupKey = viewMode === 'month' ? 'yearMonth' : 'year'
+  // 期間指定（未選択なら直近6ヶ月）
+  const months = [...new Set(data.map(d => d.yearMonth).filter(Boolean))].sort()
+  const from0 = rangeFrom || months[Math.max(0, months.length - 6)] || ''
+  const to0   = rangeTo   || months[months.length - 1] || ''
+  const [from, to] = [from0, to0].sort()
+
+  const byFactory = selectedFactory === 'all' ? data : data.filter(d => d.factory === selectedFactory)
+  const filtered = viewMode === 'range'
+    ? byFactory.filter(d => d.yearMonth && d.yearMonth >= from && d.yearMonth <= to)
+    : byFactory
+  const groupKey = viewMode === 'year' ? 'year' : 'yearMonth'
   const rows = aggregate(filtered, groupKey)
 
   const total = rows.reduce((acc, r) => ({
@@ -66,7 +77,19 @@ export default function DirectTab({ data = [] }) {
         <div className="flex gap-2">
           <button onClick={() => setViewMode('month')} className={`px-4 py-2 rounded-lg text-sm font-medium ${viewMode === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>月別</button>
           <button onClick={() => setViewMode('year')} className={`px-4 py-2 rounded-lg text-sm font-medium ${viewMode === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>年別</button>
+          <button onClick={() => setViewMode('range')} className={`px-4 py-2 rounded-lg text-sm font-medium ${viewMode === 'range' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>期間指定</button>
         </div>
+        {viewMode === 'range' && (
+          <div className="flex gap-2 items-center">
+            <select value={from0} onChange={e => setRangeFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm">
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <span className="text-gray-500">〜</span>
+            <select value={to0} onChange={e => setRangeTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm">
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        )}
         <select value={selectedFactory} onChange={e => setSelectedFactory(e.target.value)} className="px-3 py-2 border rounded-lg text-sm">
           {factories.map(f => <option key={f} value={f}>{f === 'all' ? '全工場' : f}</option>)}
         </select>
