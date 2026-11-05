@@ -5,6 +5,8 @@ export default function ComparisonTab({ inspData, directData }) {
   const [filterType, setFilterType] = useState('month')
   const [yearMonth, setYearMonth] = useState('')
   const [year, setYear] = useState('')
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
   const [yearMonths, setYearMonths] = useState([])
   const [years, setYears] = useState([])
   const [factory, setFactory] = useState('all')
@@ -22,7 +24,12 @@ export default function ComparisonTab({ inspData, directData }) {
       ...directData.map(d => d.yearMonth),
     ])].sort()
     setYearMonths(yms)
-    if (yms.length > 0) setYearMonth(yms[yms.length - 1])
+    if (yms.length > 0) {
+      setYearMonth(yms[yms.length - 1])
+      // 期間指定の初期値：直近6ヶ月
+      setRangeFrom(prev => prev || yms[Math.max(0, yms.length - 6)])
+      setRangeTo(prev => prev || yms[yms.length - 1])
+    }
 
     const ys = [...new Set(yms.map(ym => ym.split('/')[0]))].sort()
     setYears(ys)
@@ -38,6 +45,11 @@ export default function ComparisonTab({ inspData, directData }) {
   const filterByDate = (data) => {
     if (filterType === 'month') return data.filter(d => d.yearMonth === yearMonth)
     if (filterType === 'year')  return data.filter(d => d.yearMonth?.startsWith(year))
+    if (filterType === 'range') {
+      // 開始と終了が逆に選ばれても動くように並べ替え
+      const [from, to] = [rangeFrom, rangeTo].sort()
+      return data.filter(d => d.yearMonth && d.yearMonth >= from && d.yearMonth <= to)
+    }
     return data
   }
 
@@ -208,6 +220,7 @@ export default function ComparisonTab({ inspData, directData }) {
           <select value={filterType} onChange={e => setFilterType(e.target.value)}>
             <option value="month">年月</option>
             <option value="year">年</option>
+            <option value="range">期間指定</option>
             <option value="all">全期間</option>
             <option value="trendMonth">月別推移（全工場）</option>
             <option value="trendYear">年別推移（全工場）</option>
@@ -217,6 +230,18 @@ export default function ComparisonTab({ inspData, directData }) {
           <div>
             <label style={{ marginRight: 8 }}>年月：</label>
             <select value={yearMonth} onChange={e => setYearMonth(e.target.value)}>
+              {yearMonths.map(ym => <option key={ym} value={ym}>{ym}</option>)}
+            </select>
+          </div>
+        )}
+        {filterType === 'range' && (
+          <div>
+            <label style={{ marginRight: 8 }}>期間：</label>
+            <select value={rangeFrom} onChange={e => setRangeFrom(e.target.value)}>
+              {yearMonths.map(ym => <option key={ym} value={ym}>{ym}</option>)}
+            </select>
+            <span style={{ margin: '0 8px' }}>〜</span>
+            <select value={rangeTo} onChange={e => setRangeTo(e.target.value)}>
               {yearMonths.map(ym => <option key={ym} value={ym}>{ym}</option>)}
             </select>
           </div>
