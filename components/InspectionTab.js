@@ -8,16 +8,24 @@ export default function InspectionTab({ data }) {
   const [period, setPeriod] = useState('month')
   const [selectedPeriod, setSelectedPeriod] = useState('all')
   const [groupBy, setGroupBy] = useState('factory')
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
 
   const months = useMemo(() => getMonths(data), [data])
   const years  = useMemo(() => getYears(data), [data])
   const periods = period === 'month' ? months : years
 
+  // 期間指定（未選択なら直近6ヶ月）
+  const from0 = rangeFrom || months[Math.max(0, months.length - 6)] || ''
+  const to0   = rangeTo   || months[months.length - 1] || ''
+  const [from, to] = [from0, to0].sort()
+
   const filtered = useMemo(() => {
+    if (period === 'range') return data.filter(d => d.yearMonth && d.yearMonth >= from && d.yearMonth <= to)
     if (selectedPeriod === 'all') return data
     const key = period === 'month' ? 'yearMonth' : 'year'
     return data.filter(d => d[key] === selectedPeriod)
-  }, [data, selectedPeriod, period])
+  }, [data, selectedPeriod, period, from, to])
 
   const groupKey = groupBy === 'both'
     ? ['factory', 'inspector']
@@ -35,9 +43,10 @@ export default function InspectionTab({ data }) {
   }, [filtered, groupKey])
 
   const trendData = useMemo(() => {
-    const key = period === 'month' ? 'yearMonth' : 'year'
+    const key = period === 'year' ? 'year' : 'yearMonth'
+    const src = period === 'range' ? filtered : data
     const map = {}
-    for (const d of data) {
+    for (const d of src) {
       const k = d[key]
       if (!k) continue
       if (!map[k]) map[k] = { period: k, inspCost: 0, base: 0, inspPlusOthers: 0 }
@@ -46,7 +55,7 @@ export default function InspectionTab({ data }) {
       map[k].inspPlusOthers += d.inspPlusOthers
     }
     return Object.values(map).sort((a, b) => a.period.localeCompare(b.period))
-  }, [data, period])
+  }, [data, filtered, period])
 
   const handlePeriodTypeChange = (p) => {
     setPeriod(p)
@@ -65,13 +74,24 @@ export default function InspectionTab({ data }) {
       <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 items-center">
         <div className="flex gap-2">
           <label className="text-sm font-medium text-slate-600">期間：</label>
-          {['month','year'].map(p => (
+          {['month','year','range'].map(p => (
             <button key={p}
               onClick={() => handlePeriodTypeChange(p)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition ${period === p ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >{p === 'month' ? '月別' : '年別'}</button>
+            >{p === 'month' ? '月別' : p === 'year' ? '年別' : '期間指定'}</button>
           ))}
         </div>
+        {period === 'range' ? (
+          <div className="flex gap-2 items-center">
+            <select value={from0} onChange={e => setRangeFrom(e.target.value)} className="px-2 py-1 border rounded-lg text-sm">
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <span className="text-slate-500">〜</span>
+            <select value={to0} onChange={e => setRangeTo(e.target.value)} className="px-2 py-1 border rounded-lg text-sm">
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        ) : (
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setSelectedPeriod('all')}
@@ -84,6 +104,7 @@ export default function InspectionTab({ data }) {
             >{p}</button>
           ))}
         </div>
+        )}
         <div className="flex gap-2 ml-auto">
           <label className="text-sm font-medium text-slate-600">グループ：</label>
           {[['factory','工場'],['inspector','検品会社'],['both','工場＋会社']].map(([v,l]) => (
@@ -98,7 +119,7 @@ export default function InspectionTab({ data }) {
       {/* トレンドグラフ */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-base font-bold text-slate-700 mb-4">
-          {period === 'month' ? '月別' : '年別'}コスト推移
+          {period === 'year' ? '年別' : '月別'}コスト推移{period === 'range' ? `（${from}〜${to}）` : ''}
         </h2>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={trendData} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
@@ -120,7 +141,7 @@ export default function InspectionTab({ data }) {
           <h2 className="text-base font-bold text-slate-700">
             {groupBy === 'factory' ? '工場別' : groupBy === 'inspector' ? '検品会社別' : '工場＋検品会社別'}　コスト明細
             <span className="text-sm font-normal text-slate-400 ml-2">
-              {selectedPeriod === 'all' ? '全期間' : selectedPeriod}
+              {period === 'range' ? `${from}〜${to}` : selectedPeriod === 'all' ? '全期間' : selectedPeriod}
             </span>
           </h2>
         </div>
